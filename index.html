@@ -1,0 +1,449 @@
+﻿<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>理科マスターかるた v1.5.3</title>
+    <style>
+        body { font-family: 'Hiragino Kaku Gothic ProN', sans-serif; margin: 0; overflow: hidden; background: #222; color: white; display: flex; flex-direction: column; height: 100vh; }
+        .player-zone { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; position: relative; padding: 10px; box-sizing: border-box; overflow: hidden; }
+        #p1-zone { transform: rotate(180deg); background: #1a237e; border-bottom: 2px solid #fff; }
+        #p2-zone { background: #b71c1c; border-top: 2px solid #fff; }
+        #center-panel { height: 150px; background: #000; display: flex; align-items: center; justify-content: space-between; z-index: 100; box-shadow: 0 0 20px rgba(0,0,0,0.5); padding: 0 15px; flex-shrink: 0; position: relative; }
+        .yomi-container { width: 35%; height: 80%; display: flex; align-items: center; justify-content: center; text-align: center; }
+        .yomi-box { font-size: 1rem; color: #ffeb3b; font-weight: bold; line-height: 1.4; display: none; }
+        #p1-yomi-container { transform: rotate(180deg); }
+        
+        /* コントロールボックスの整理 */
+        #control-box { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 30%; gap: 4px; }
+        .select-row { display: flex; gap: 4px; width: 100%; justify-content: center; }
+        .btn-group { display: flex; flex-wrap: wrap; justify-content: center; gap: 2px; }
+        #theme-btn-group { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; max-height: 50px; overflow-y: auto; }
+        
+        button, select { padding: 4px 6px; font-size: 0.7rem; cursor: pointer; background: #444; color: white; border: 1px solid #777; border-radius: 4px; }
+        select { background: #333; width: 85px; }
+        #start-btn { background: #ff9800; border: none; font-weight: bold; color: #000; width: 100%; font-size: 0.85rem; padding: 6px; }
+        #reset-btn { background: #b71c1c; color: white; border: none; font-size: 0.6rem; padding: 2px 6px; }
+        .mode-active { background: #00e5ff !important; color: #000 !important; border-color: #fff !important; }
+
+
+        .msg-overlay { position: absolute; font-size: 2rem; font-weight: bold; z-index: 10; background: rgba(0,0,0,0.8); padding: 10px 20px; border-radius: 10px; display: none; pointer-events: none; text-align: center; }
+        .penalty-msg { color: #ff5252; }
+        .combo-msg { color: #00e5ff; text-shadow: 0 0 10px #00e5ff; }
+        .lucky-msg { color: #ffeb3b; text-shadow: 0 0 15px #ff9800; border: 2px solid #ffeb3b; }
+        .penalty { opacity: 0.5; pointer-events: none; }
+        .board { display: grid; gap: 6px; width: 100%; max-width: 1200px; max-height: 90%; justify-content: center; align-content: center; margin: auto; }
+        .card { background: #fff; color: #333; border-radius: 6px; display: flex; align-items: center; justify-content: center; cursor: pointer; user-select: none; font-weight: bold; text-align: center; padding: 5px; box-sizing: border-box; box-shadow: 2px 2px 5px rgba(0,0,0,0.3); aspect-ratio: 16 / 10; }
+        .card.taken { opacity: 0; pointer-events: none; transition: 0.4s; }
+        .quiz-container { display: none; width: 90%; height: 80%; align-items: center; justify-content: space-between; gap: 20px; }
+        .quiz-target { flex: 1; background: #ffeb3b; color: #000; font-size: 2.5rem; font-weight: bold; height: 100%; display: flex; align-items: center; justify-content: center; border-radius: 15px; box-shadow: 0 0 15px gold; }
+        .quiz-choices { flex: 2; display: flex; flex-direction: column; gap: 10px; height: 100%; }
+        .choice-btn { flex: 1; background: #fff; color: #333; border: none; border-radius: 8px; font-size: 0.85rem; font-weight: bold; cursor: pointer; padding: 5px 15px; line-height: 1.2; text-align: left; }
+        .score-board { position: absolute; left: 15px; font-size: 1.2rem; font-weight: bold; opacity: 0.8; }
+        .accuracy-text { font-size: 0.7rem; display: block; color: #aaa; margin-top: 5px; }
+        .result-display { position: absolute; font-size: 5rem; font-weight: bold; text-shadow: 0 0 20px #000; display: none; z-index: 20; }
+        .win { color: #4caf50; }
+        .lose { color: #757575; }
+    </style>
+</head>
+<body>
+    <div id="p1-zone" class="player-zone">
+        <div class="score-board">1P: <span id="p1-score">0</span><br><span class="accuracy-text">通算正解率: <span id="p1-acc">0%</span></span></div>
+        <div id="p1-penalty" class="msg-overlay penalty-msg">お手付き！-1点</div>
+        <div id="p1-combo" class="msg-overlay combo-msg"></div>
+        <div id="p1-lucky" class="msg-overlay lucky-msg">LUCKY BONUS! +3</div>
+        <div id="p1-result" class="result-display"></div>
+        <div id="p1-board" class="board"></div>
+        <div id="p1-quiz" class="quiz-container">
+            <div class="quiz-target" id="p1-q-target"></div>
+            <div class="quiz-choices" id="p1-q-choices"></div>
+        </div>
+    </div>
+    <div id="center-panel">
+        <div class="yomi-container" id="p2-yomi-container"><div class="yomi-box" id="p2-yomi-text"></div></div>
+        <div id="control-box">
+            <button id="start-btn" onclick="startBattle()">ゲームスタート</button>
+            <div class="select-row">
+                <div class="btn-group">
+                    <button id="mode-karuta" class="mode-active" onclick="setGameMode('karuta')">かるた</button>
+                    <button id="mode-quiz" onclick="setGameMode('quiz')">３択</button>
+                </div>
+                <button id="reset-btn" onclick="resetStats()">データ初期化</button>
+            </div>
+            <div class="select-row">
+                <select id="grade-sel" onchange="updateFields()">
+                    <option value="g1">中1</option>
+                    <option value="g2" selected>中2</option>
+                    <option value="g3">中3</option>
+                </select>
+                <select id="field-sel" onchange="updateThemeButtons()">
+                    <option value="bio">生物</option>
+                    <option value="chem">化学</option>
+                    <option value="earth">地学</option>
+                    <option value="phys">物理</option>
+                </select>
+            </div>
+            <div class="btn-group" id="theme-btn-group"></div>
+        </div>
+        <div class="yomi-container" id="p1-yomi-container"><div class="yomi-box" id="p1-yomi-text"></div></div>
+    </div>
+    <div id="p2-zone" class="player-zone">
+        <div class="score-board">2P: <span id="p2-score">0</span><br><span class="accuracy-text">通算正解率: <span id="p2-acc">0%</span></span></div>
+        <div id="p2-penalty" class="msg-overlay penalty-msg">お手付き！-1点</div>
+        <div id="p2-combo" class="msg-overlay combo-msg"></div>
+        <div id="p2-lucky" class="msg-overlay lucky-msg">LUCKY BONUS! +3</div>
+        <div id="p2-result" class="result-display"></div>
+        <div id="p2-board" class="board"></div>
+        <div id="p2-quiz" class="quiz-container">
+            <div class="quiz-target" id="p2-q-target"></div>
+            <div class="quiz-choices" id="p2-q-choices"></div>
+        </div>
+    </div>
+
+
+    <script>
+        const dataTree = {
+            g1: {
+                bio: {
+                    flower: { name: "花のつくり", data: [{y:"受粉すると将来種子になる部分", t:"胚珠"},{y:"花粉がつくめしべの先端", t:"柱頭"},{y:"胚珠が子房の中にある植物", t:"被子植物"},{y:"マツなどの胚珠がむき出しの植物", t:"裸子植物"},{y:"将来果実になる部分", t:"子房"},{y:"おしべの先の花粉が入った袋", t:"やく"},{y:"花弁がすべて合わさっている花", t:"合弁花"},{y:"花弁が1枚ずつ離れている花", t:"離弁花"}] },
+                    leaf: { name: "根・茎・葉", data: [{y:"植物が光を受けて養分を作る働き", t:"光合成"},{y:"水蒸気が出ていく葉の隙間", t:"気孔"},{y:"水の通り道である管", t:"道管"},{y:"養分の通り道である管", t:"師管"},{y:"道管と師管が集まった束", t:"維管束"},{y:"葉から水蒸気が出ていく現象", t:"蒸散"},{y:"双子葉類の根に見られる太い根", t:"主根"},{y:"主根から枝分かれした細い根", t:"側根"}] },
+                    class: { name: "植物の分類", data: [{y:"種子を作らず胞子で増え、根・茎・葉の区別がある植物", t:"シダ植物"},{y:"種子を作らず胞子で増え、維管束がなく湿った所に生える", t:"コケ植物"},{y:"芽生えの葉（子葉）が2枚の仲間", t:"双子葉類"},{y:"芽生えの葉（子葉）が1枚の仲間", t:"単子葉類"},{y:"双子葉類の中で花弁が離れている仲間", t:"離弁花類"},{y:"葉脈が平行に通っている特徴の仲間", t:"単子葉類の葉脈"},{y:"光合成を行わず、胞子で増えるカビの仲間", t:"菌類"},{y:"水中の小さな植物、ミカヅキモなど", t:"藻類"}] },
+                    micro: { name: "観察の基礎", data: [{y:"顕微鏡のレボルバーについている倍率を変えるためのレンズ", t:"対物レンズ"},{y:"ルーペで見るとき、動かせるものはどちらへ", t:"目"},{y:"顕微鏡の明るさを調節する部分", t:"しぼり"},{y:"ピントを合わせるために回すネジ", t:"調節ねじ"},{y:"スライドガラスに材料をのせたもの", t:"プレパラート"},{y:"目に最も近い側のレンズ", t:"接眼レンズ"},{y:"視野を動かすために回す部分", t:"ステージ上下ハンドル"},{y:"微細なピント調整に使うネジ", t:"微動ねじ"}] }
+                },
+                chem: {
+                    prop: { name: "物質の性質", data: [{y:"炭素を含み、燃えて二酸化炭素を出す物質", t:"有機物"},{y:"鉄のように光沢があり電気を通す物質", t:"金属"},{y:"物質1cm3あたりの質量", t:"密度"},{y:"金属ではない物質", t:"非金属"},{y:"叩くと広がる金属の性質", t:"展性"},{y:"引っ張ると伸びる金属の性質", t:"延性"},{y:"食塩などのように炭素を含まない物質", t:"無機物"},{y:"電流がよく流れる金属の性質", t:"電気伝導性"}] },
+                    gas: { name: "気体の性質", data: [{y:"石灰水を白く濁らせる性質の気体", t:"二酸化炭素"},{y:"火のついた線香を激しく燃やす性質の気体", t:"酸素"},{y:"水に非常に溶けやすく刺激臭がある性質の気体", t:"アンモニア"},{y:"最も軽く、燃えると水ができる性質の気体", t:"水素"},{y:"空気の約78％を占める気体", t:"窒素"},{y:"プールの消毒液のような臭いの気体", t:"塩素"},{y:"卵の腐ったような臭いの気体", t:"硫化水素"},{y:"水に溶けにくい気体を集める方法", t:"水上置換法"}] },
+                    state: { name: "状態変化", data: [{y:"液体が沸騰して気体になるときの温度", t:"沸点"},{y:"固体が溶けて液体になるときの温度", t:"融点"},{y:"沸点の違いを利用して分ける操作", t:"蒸留"},{y:"物質の体積が変わり質量が変わらない変化", t:"状態変化"},{y:"液体から気体への変化", t:"気化"},{y:"気体から液体への変化", t:"液化"},{y:"液体から固体への変化", t:"凝固"},{y:"固体から液体への変化", t:"融解"}] },
+                    sol: { name: "水溶液", data: [{y:"溶質が溶媒に溶けてできた全体", t:"溶液"},{y:"これ以上溶かすことのできない状態", t:"飽和水溶液"},{y:"一度溶かした物質を再び結晶にする", t:"再結晶"},{y:"溶けている物質そのもの", t:"溶質"},{y:"物質を溶かしている液体", t:"溶媒"},{y:"水が溶媒である溶液", t:"水溶液"},{y:"溶質/溶液×100で求められる濃度", t:"質量パーセント濃度"},{y:"純粋な物質からなる固体", t:"結晶"}] }
+                },
+                earth: {
+                    volc: { name: "火山と岩石", data: [{y:"粘り気が中間程度の火山が噴火してできる火山の形", t:"成層火山"},{y:"地表近くで急に冷えて固まった岩石", t:"火山岩"},{y:"地下深くでゆっくり冷えた岩石の総称", t:"深成岩"},{y:"マグマが冷えてできた岩石の総称", t:"火成岩"},{y:"火成岩に含まれる大きな結晶", t:"斑晶"},{y:"火山岩の隙間を埋める細かい部分", t:"石基"},{y:"深成岩の、結晶が組み合わさったつくり", t:"等粒状組織"},{y:"地下にある岩石が溶けた高温の物質", t:"マグマ"}] },
+                    earthq: { name: "地震", data: [{y:"地震の揺れの大きさを表す尺度", t:"震度"},{y:"地震そのものの規模を表す尺度", t:"マグニチュード"},{y:"最初に来る小さな揺れ", t:"初期微動"},{y:"後から来る大きな揺れ", t:"主要動"},{y:"地震が発生した地下の場所", t:"震源"},{y:"震源の真上の地表の地点", t:"震央"},{y:"初期微動を伝える速い波", t:"P波"},{y:"主要動を伝える遅い波", t:"S波"}] },
+                    strat: { name: "地層", data: [{y:"地層が押し曲げられたもの", t:"しゅう曲"},{y:"当時の環境を知る手がかりになる化石", t:"示相化石"},{y:"当時の年代を知る手がかりになる化石", t:"示準化石"},{y:"地層が途切れてずれたもの", t:"断層"},{y:"火山灰などが積もってできた岩石", t:"凝灰岩"},{y:"フズリナやサンゴなどの生物の死骸が固まってできた岩石", t:"石灰岩"},{y:"泥が固まってできた岩石", t:"泥岩"},{y:"砂が固まってできた岩石", t:"砂岩"}] },
+                    min: { name: "造岩鉱物", data: [{y:"不規則に割れる無色透明な鉱物", t:"石英"},{y:"決まった方向に割れる白っぽい鉱物", t:"長石"},{y:"黒っぽく板状に剥がれる鉱物", t:"黒雲母"},{y:"緑褐色で柱状の鉱物", t:"角閃石"},{y:"暗緑色で短い柱状の鉱物", t:"輝石"},{y:"黄緑色で丸みのある鉱物", t:"カンラン石"},{y:"磁石に引き寄せられる鉱物", t:"磁鉄鉱"},{y:"色がついている鉱物の総称", t:"有色鉱物"}] }
+                },
+                phys: {
+                    light: { name: "光の反射・屈折", data: [{y:"鏡などで光がはね返ること", t:"光の反射"},{y:"境界面で折れ曲がること", t:"光の屈折"},{y:"入射角がある角度以上で全て反射する", t:"全反射"},{y:"光が直進すること", t:"光の直進"},{y:"鏡に入ってくる光と垂直な線の間の角", t:"入射角"},{y:"反射して出ていく光と垂直な線の間の角", t:"反射角"},{y:"白色の光を分けるために使う透明な三角柱の物体", t:"プリズム"},{y:"水から空気へ出る時に大きくなる角は？", t:"屈折角"}] },
+                    lens: { name: "凸レンズ", data: [{y:"レンズを通った光が集まる点", t:"焦点"},{y:"中心から焦点までの距離", t:"焦点距離"},{y:"スクリーンに映る上下左右逆の像", t:"実像"},{y:"レンズ越しに見える大きく正立した像", t:"虚像"},{y:"レンズの中心を通る光の進み方", t:"レンズ中心の光"},{y:"光軸に平行な光が屈折して通る場所", t:"焦点"},{y:"物体の位置が焦点より外側の時にできる像", t:"実像"},{y:"物体の位置が焦点より内側の時に見える像", t:"虚像"}] },
+                    sound: { name: "音", data: [{y:"音の大きさを決める振幅の大きさ", t:"振幅"},{y:"音の高さを決める振動回数", t:"周波数"},{y:"音を伝える物質がない状態", t:"真空"},{y:"音源が1秒間に振動する回数の単位", t:"ヘルツ"},{y:"音を出しているもの", t:"音源"},{y:"弦を短く、強く張ると音はどうなるか", t:"音が高くなる"},{y:"弦を太く、弱く張るとどうなるか", t:"音が低くなる"},{y:"音の波形を観察する装置", t:"オシロスコープ"}] },
+                    force: { name: "力", data: [{y:"バネののびは力の大きさに比例するという法則", t:"フックの法則"},{y:"面に対して垂直に働く力", t:"垂直抗力"},{y:"重力の単位", t:"ニュートン"},{y:"100gの物体に働く重力は約何Nか", t:"1N"},{y:"地球が中心に向かって引く力", t:"重力"},{y:"1m2あたりの面を垂直に押す力", t:"圧力"},{y:"圧力の単位", t:"パスカル"},{y:"空気の重さによる圧力", t:"大気圧"}] }
+                }
+            },
+            g2: {
+                bio: {
+                    cell: { name: "細胞", data: [{ y: "染色液によく染まる、細胞内の丸い粒", t: "核" },{ y: "植物にあり光合成を行う緑色の粒", t: "葉緑体" },{ y: "植物の外側にある丈夫な仕切り", t: "細胞壁" },{ y: "同じ形や働きを持つ細胞が集まったもの", t: "組織" },{ y: "いくつかの組織が集まり特定の働きをする", t: "器官" },{y:"核のまわりにある液状の部分", t:"細胞質"},{y:"細胞内外の物質の出入りを調節する膜", t:"細胞膜"},{y:"植物細胞で発達し、不要物がたまる場所", t:"液胞"}] },
+                    digestion: { name: "消化", data: [{ y: "だ液に含まれデンプンを分解する消化酵素", t: "アミラーゼ" },{ y: "胃液に含まれタンパク質を分解する消化酵素", t: "ペプシン" },{ y: "肝臓で作られ脂肪の消化を助ける液", t: "胆汁" },{ y: "小腸の壁にある栄養分を吸収する突起", t: "柔毛" },{ y: "タンパク質が消化され最終的にできる物質", t: "アミノ酸" },{ y: "デンプンが消化され最終的にできる物質", t: "ブドウ糖" },{y:"脂肪がが消化され最終的にできる物質はモノグリセリドともう一つは", t:"脂肪酸"},{y:"消化液に含まれ、分解を助ける物質の総称", t:"消化酵素"}] },
+                    blood: { name: "血液循環", data: [{ y: "心臓から送り出された血液が流れる血管", t: "動脈" },{ y: "心臓に戻る血液が流れる血管", t: "静脈" },{ y: "網目状に広がった非常に細い血管", t: "毛細血管" },{ y: "心臓から肺を巡る経路", t: "肺循環" },{ y: "血液成分で酸素を運ぶ赤い粒", t: "赤血球" },{ y: "酸素を運ぶ色素", t: "ヘモグロビン" },{y:"バイ菌などを殺す働きをする成分", t:"白血球"},{y:"出血した時に血を固める成分", t:"血小板"}] },
+                    nerve: { name: "神経", data: [{ y: "目や耳など、周囲の刺激を受け取る器官", t: "感覚器官" },{ y: "刺激を脳や脊ずいに伝える神経", t: "感覚神経" },{ y: "脳と脊ずいからなる中心的な神経", t: "中枢神経" },{ y: "意識に関係なく瞬時に起こる反応", t:"反射" },{y:"中枢から筋肉へ命令を伝える神経", t:"運動神経"},{y:"感覚神経と運動神経の総称", t:"末梢神経"},{y:"熱いものに触れて思わず手を引く反応", t:"防御反応"},{y:"光の刺激を受け取る目の膜", t:"網膜"}] }
+                },
+                chem: {
+                    atom: { name: "原子と分子", data: [{y:"それ以上分割できない粒子", t:"原子"},{y:"いくつかの原子が結びついた粒子", t:"分子"},{y:"物質を記号で表したもの", t:"化学式"},{y:"原子を記号で表したもの", t:"元素記号"},{y:"1種類の原子だけでできている物質", t:"単体"},{y:"2種類以上の原子でできている物質", t:"化合物"},{y:"記号 H で表される原子", t:"水素原子"},{y:"記号 Ag で表される原子", t:"銀原子"}] },
+                    decomp: { name: "化学分解", data: [{y:"1種類の物質が2種類以上に分かれる化学変化", t:"分解"},{y:"電流を流して物質を分解すること", t:"電気分解"},{y:"熱を加えて分解すること", t:"熱分解"},{y:"炭酸水素ナトリウムを熱すると出る気体", t:"二酸化炭素"},{y:"水の電気分解で陰極に出る気体", t:"水素"},{y:"水の電気分解で陽極に出る気体", t:"酸素"},{y:"酸化銀を熱した時に残る物質", t:"銀"},{y:"炭酸水素ナトリウムを熱した試験管の口に付く液体", t:"水"}] },
+                    comb: { name: "化合と酸化", data: [{y:"物質が酸素と結びつくこと", t:"酸化"},{y:"光や熱を出し激しく酸化すること", t:"燃焼"},{y:"酸化物から酸素を取り除くこと", t:"還元"},{y:"2種類の物質が結びつき別の物質になること", t:"化合"},{y:"鉄と硫黄が結びついてできる物質", t:"硫化鉄"},{y:"銅を加熱してできる黒い物質", t:"酸化銅"},{y:"有機物が燃えた時にできる物質", t:"二酸化炭素"},{y:"酸化銅から銅を取り出すために使う黒い物質", t:"炭素"}] },
+                    mass: { name: "化学変化と質量", data: [{y:"反応前後で全体の質量が変わらない法則", t:"質量保存の法則"},{y:"周囲から熱を吸収する化学反応", t:"吸熱反応"},{y:"周囲へ熱を発生する化学反応", t:"発熱反応"},{y:"化学カイロで酸化されている物質", t:"鉄"},{y:"銅4gと酸素1gが反応する比", t:"4:1"},{y:"マグネシウム3gと酸素2gが反応する比", t:"3:2"},{y:"水酸化バリウムと塩化アンモニウムの反応", t:"吸熱反応（冷却）"},{y:"反応で沈殿ができると密閉容器の重さは？", t:"変わらない"}] }
+                },
+                earth: {
+                    vapor: { name: "気象の観測", data: [{y:"1m3が含むことのできる最大水蒸気量", t:"飽和水蒸気量"},{y:"水蒸気が水滴になり始める温度", t:"露点"},{y:"空気の湿り具合を％で表したもの", t:"湿度"},{y:"雲ができる原因となる空気の流れ", t:"上昇気流"},{y:"雲の粒が大きくなって降ってくるもの", t:"雨"},{y:"上昇気流が発生しやすい場所は？", t:"低気圧"},{y:"地表付近で水蒸気が冷えてできたもの", t:"霧"},{y:"露点が高い空気の特徴", t:"水蒸気が多い"}] },
+                    front: { name: "前線と天候", data: [{y:"暖気が寒気にのり上げる前線", t:"温暖前線"},{y:"寒気が暖気を押し上げる前線", t:"寒冷前線"},{y:"2つの前線が重なったもの", t:"閉塞前線"},{y:"性質の違う空気の大きな塊", t:"気団"},{y:"温暖前線の付近で降る雨の降り方", t:"穏やかに長く"},{y:"寒冷前線の通過後の気温はどう変化する", t:"急激に下がる"},{y:"寒冷前線付近で垂直に発生する雲", t:"積乱雲"},{y:"温暖前線付近で広範囲に発生する雲", t:"高層雲"}] },
+                    press: { name: "気圧と風", data: [{y:"気圧の等しい地点を結んだ線", t:"等圧線"},{y:"中心部で上昇気流が起こる気圧", t:"低気圧の空気"},{y:"時計回りに風が吹き出す気圧", t:"高気圧の空気"},{y:"気圧の単位", t:"ヘクトパスカル"},{y:"風の吹く向き", t:"高気圧から低気圧へ"},{y:"海から陸へ吹く昼間の風の名前", t:"海風"},{y:"陸から海へ吹く夜間の風の名前", t:"陸風"},{y:"1気圧は約何hPaか", t:"1013"}] },
+                    season: { name: "日本の天気", data: [{y:"シベリア気団から吹く季節風の向き", t:"北西"},{y:"暖気団と寒気団がぶつかり動かない前線", t:"停滞前線"},{y:"夏の太平洋高気圧の気団", t:"小笠原気団"},{y:"春や秋に移動してくる高気圧", t:"移動性高気圧"},{y:"冬の気圧配置の特徴", t:"西高東低"},{y:"夏の気圧配置の特徴", t:"南高北低"},{y:"上空を西から東へ流れる強い風", t:"偏西風"},{y:"梅雨の時期にできる停滞前線の別名", t:"梅雨前線"}] }
+                },
+                phys: {
+                    circuit: { name: "電流と電圧", data: [{y:"電流の大きさの単位", t:"アンペア"},{y:"電圧の大きさの単位", t:"ボルト"},{y:"電流の通り道が1本のつなぎ方", t:"直列回路"},{y:"枝分かれした回路のつなぎ方", t:"並列回路"},{y:"直列回路の電流はどこでもどうなるか", t:"常に同じ"},{y:"並列回路の電流はどんな特徴があるか", t:"各部分に流れる電流の和が枝分かれの前後と同じ"},{y:"電流計を回路につなぐ方法", t:"回路に直列"},{y:"電圧計を回路につなぐ方法", t:"回路に並列"}] },
+                    ohm: { name: "オームの法則", data: [{y:"電流は電圧に比例するという法則", t:"オームの法則"},{y:"電気の通りにくさを表す量", t:"電気抵抗"},{y:"抵抗の大きさの単位", t:"オーム"},{y:"電流の流しやすさが極めて大きい物質", t:"導体"},{y:"電流をほとんど通さない物質", t:"絶縁体"},{y:"金属ではないが、抵抗が小さい物質", t:"炭素"},{y:"直列回路の全体抵抗は？", t:"各抵抗の和"},{y:"並列回路の全体抵抗は？", t:"各抵抗の逆数の和が全体の抵抗の逆数"}] },
+                    work: { name: "電力と熱", data: [{y:"1秒間に使う電気エネルギー量", t:"電力"},{y:"電流によって発生する熱量", t:"熱量"},{y:"電力の単位", t:"ワット"},{y:"熱量の単位", t:"ジュール"},{y:"電力に時間をかけたもの", t:"電力量"},{y:"1Whは何Jか", t:"3600J"},{y:"電力量の別の単位", t:"キロワット時"},{y:"水1gの温度を1度上げる熱量", t:"約4.2J"}] },
+                    mag: { name: "磁界と電流", data: [{y:"磁力が働く空間", t:"磁界"},{y:"磁界内の電流が受ける力を利用する回転装置", t:"モーター"},{y:"磁界の変化で電流が流れる現象", t:"電磁誘導"},{y:"コイルの中の磁界を変化させて流れる電流", t:"誘導電流"},{y:"磁力線の向きはどちらからどちらか", t:"N極からS極"},{y:"右ねじの法則でネジが進む向きが表しているのは？", t:"磁界の向き"},{y:"フレミングの左手の法則の中指は何の向きか", t:"電流の向き"},{y:"コイルに流れる電流と発生する磁界の組み合わせを調べるときに使う手はどっちの手？", t:"右手"}] }
+                }
+            },
+            g3: {
+                bio: {
+                    cell3: { name: "細胞分裂", data: [{y:"細胞が2つに分かれること", t:"細胞分裂"},{y:"分裂時に現れるひも状のもの", t:"染色体"},{y:"生殖細胞ができる時の特殊な分裂", t:"減数分裂"},{y:"受精卵が分裂して親と同じ体になるまでの過程", t:"発生"},{y:"分裂後、細胞がどうなることで体が育つか", t:"成長する"},{y:"普通の成長に使う細胞分裂の名称", t:"体細胞分裂"},{y:"分裂中に染色体が並ぶ場所", t:"中央"},{y:"根の先端付近にある、分裂が盛んな場所", t:"成長点"}] },
+                    gene: { name: "遺伝の規則性", data: [{y:"形や性質を子に伝えるもとは？", t:"遺伝子"},{y:"自家受粉しても形質が同じ家系", t:"純系"},{y:"対立形質のうち子に現れる方の形質", t:"顕性形質"},{y:"遺伝子の本体の化学物質名", t:"DNA"},{y:"メンデルが実験に使った植物", t:"エンドウ"},{y:"子に現れない方の形質", t:"潜性形質"},{y:"対になった遺伝子が別々の細胞に入る法則", t:"分離の法則"},{y:"Aaの遺伝子を持つ個体の形質は？", t:"顕性の形質"}] },
+                    evol: { name: "進化", data: [{y:"現在の形は違うが元は同じ器官", t:"相同器官"},{y:"生物が長い時間をかけて変化すること", t:"進化"},{y:"始祖鳥のように2つの仲間の特徴を持つ化石", t:"中間的な化石"},{y:"カメの甲羅は、どの器官が変化したものか", t:"あばら骨"},{y:"水中から陸上へ進化した証拠とされる種", t:"両生類"},{y:"クジラのヒレと人間の腕の関係", t:"相同な関係"},{y:"形や働きは似ているが、由来が違う器官", t:"相似器官"},{y:"もとは足だったが退化したヘビの骨", t:"痕跡器官"}] },
+                    eco: { name: "生態系", data: [{y:"光合成で有機物を作る生物", t:"生産者"},{y:"他の生物を食べて生きる生物", t:"消費者"},{y:"死骸を無機物に分解する生物", t:"分解者"},{y:"食べる、食べられるの関係", t:"食物連鎖"},{y:"網の目状に絡まった関係", t:"食物網"},{y:"分解者の代表例、カビやキノコのグループを総称して何と言う", t:"菌類"},{y:"分解者の代表例、乳酸菌などのグループを総称して何と言う", t:"細菌類"},{y:"生物とそれを取り巻く環境のまとまり", t:"生態系"}] }
+                },
+                chem: {
+                    ion: { name: "イオン", data: [{y:"原子が電気を帯びたもの", t:"イオン"},{y:"プラスの電気を帯びたイオン", t:"陽イオン"},{y:"水に溶けて電流を流す物質", t:"電解質"},{y:"マイナスの電気を帯びたイオン", t:"陰イオン"},{y:"原子が電子を失うと何にになるか", t:"陽イオンになる"},{y:"塩化銅水溶液を電気分解すると陰極に付着する物質", t:"銅（析出）"},{y:"塩化銅水溶液で陽極に発生する気体", t:"塩素（発生）"},{y:"ナトリウムイオンの記号", t:"Na+"}] },
+                    batt: { name: "電池", data: [{y:"化学エネルギーを電気に変える装置", t:"化学電池"},{y:"水素と酸素で発電する装置", t:"燃料電池"},{y:"充電して繰り返し使える電池", t:"二次電池"},{y:"1回使うと終わりの電池", t:"一次電池"},{y:"電池で溶け出す金属はどちらの極か", t:"負極"},{y:"ダニエル電池で使われる2種類の金属", t:"亜鉛と銅"},{y:"燃料電池の反応で発生する物質", t:"水（電池生成）"},{y:"イオン化傾向が大きい金属は？", t:"溶けやすい"}] },
+                    acid: { name: "酸とアルカリ", data: [{y:"BTB溶液を黄色に変える性質", t:"酸性"},{y:"フェノールフタレインを赤くする性質", t:"アルカリ性"},{y:"酸の正体であるイオン", t:"水素イオン"},{y:"アルカリの正体であるイオン", t:"水酸化物イオン"},{y:"BTB溶液を青色に変える性質", t:"アルカリ性の性質"},{y:"pHが7より小さいとき水溶液は何性か", t:"酸性"},{y:"pHがちょうど7の時", t:"中性"},{y:"酸と金属が反応すると出る気体", t:"水素"}] },
+                    neut: { name: "中和", data: [{y:"酸とアルカリが反応し打ち消し合う", t:"中和"},{y:"中和で水と一緒にできる物質", t:"塩（えん）"},{y:"中和反応で必ず発生する液体", t:"水（生成）"},{y:"塩酸と水酸化ナトリウムでできる塩", t:"塩化ナトリウム"},{y:"硫酸と水酸化バリウムでできる白い沈殿", t:"硫酸バリウム"},{y:"中和によって溶液の温度はどうなるか", t:"温度が上がる"},{y:"水素イオンと水酸化物イオンが結びついてできる物質は？", t:"水の分子"},{y:"中和しきったあとの溶液の性質", t:"中性溶液"}] }
+                },
+                earth: {
+                    univ: { name: "天体の動き", data: [{y:"地球の自転による星の見かけの動き", t:"日周運動"},{y:"地球の公転による星の見かけの動き", t:"年周運動"},{y:"太陽が通る天球上の道筋", t:"黄道"},{y:"地球の北極と南極を結ぶ軸", t:"地軸"},{y:"太陽が真南に来ること", t:"南中"},{y:"地軸の傾きは公転面に垂直な線から何度？", t:"23.4度"},{y:"北極星のまわりの星はどのように動くか", t:"反時計回り"},{y:"星座が1ヶ月に西へ動く角度", t:"30度"}] },
+                    sun: { name: "太陽と恒星", data: [{y:"太陽表面の温度の低い黒い点", t:"黒点"},{y:"自ら光り輝く星", t:"恒星"},{y:"太陽を取り巻く高温のガス層の名前は？", t:"コロナ"},{y:"黒点が東から西へ移動する原因は", t:"太陽の自転"},{y:"太陽の直径は地球の約何倍？", t:"約１０８倍"},{y:"太陽から噴き出す巨大な炎", t:"プロミネンス"},{y:"恒星の明るさを表す単位", t:"等級"},{y:"太陽の表面温度は何度か", t:"約6000度"}] },
+                    moon: { name: "月と金星", data: [{y:"月が太陽を隠す現象", t:"日食"},{y:"明け方に見える金星", t:"明けの明星"},{y:"月が地球の影に入る現象", t:"月食"},{y:"夕方に見える金星", t:"宵の明星"},{y:"月の満ち欠けの周期", t:"約29.5日"},{y:"太陽と地球の間にある月がある時の月の形", t:"新月"},{y:"金星が満月のように見えない理由", t:"内惑星だから"},{y:"月が常に同じ面を向けている理由", t:"自転と公転が同じ"}] },
+                    space: { name: "太陽系", data: [{y:"太陽の周りを回る大きな8つの天体", t:"惑星"},{y:"岩石でできた地球に近い惑星", t:"地球型惑星"},{y:"ガスを主成分とする巨大な惑星", t:"木星型惑星"},{y:"惑星の周りを回る天体", t:"衛星"},{y:"火星と木星の間に多く存在する小天体", t:"小惑星"},{y:"氷や塵でできた尾を引く天体", t:"彗星"},{y:"銀河系のような天体の集まり", t:"銀河"},{y:"太陽系が属する銀河の名前", t:"天の川銀河"}] }
+                },
+                phys: {
+                    motion: { name: "運動の規則性", data: [{y:"運動を続けようとする性質", t:"慣性"},{y:"速さと向きを合わせた量", t:"速度"},{y:"一直線上の2つの力を合わせること", t:"力の合成"},{y:"力が釣り合っている状態", t:"力のつり合い"},{y:"自由落下運動のように速さが一定に増える運動", t:"等加速度運動"},{y:"力を加えない時に続く速さが一定の運動", t:"等速直線運動"},{y:"１つの力を２つに分解した力", t:"分力"},{y:"2つの力を１つに合わせた力", t:"合力"}] },
+                    energy: { name: "エネルギー", data: [{y:"高い所にある物体が持つエネルギー", t:"位置エネルギー"},{y:"動いている物体が持つエネルギー", t:"運動エネルギー"},{y:"位置と運動エネルギーの和", t:"力学的エネルギー"},{y:"力学的エネルギーの和が一定に保たれる法則", t:"力学的エネルギーの保存"},{y:"石油や石炭が持つエネルギー", t:"化学エネルギー"},{y:"熱として逃げていくエネルギー", t:"熱エネルギー"},{y:"エネルギーの大きさの単位", t:"ジュール"},{y:"電球などが光を出すエネルギー", t:"光エネルギー"}] },
+                    work3: { name: "仕事", data: [{y:"力×移動距離で表される量", t:"仕事"},{y:"1秒間あたりの仕事量", t:"仕事率"},{y:"道具を使っても仕事の量は変わらないことを何と言う", t:"仕事の原理"},{y:"仕事の大きさの単位", t:"ジュール（仕事）"},{y:"仕事率の単位", t:"ワット（仕事率）"},{y:"動滑車を使うと引く力はどうなるか", t:"半分になる"},{y:"動滑車を１つ使うと引く距離はどうなるか", t:"2倍になる"},{y:"摩擦がない水平面での仕事は？", t:"0J"}] },
+                    source: { name: "資源と環境", data: [{y:"繰り返し利用できる自然エネルギー", t:"再生可能エネルギー"},{y:"ウランなどの核燃料を利用する発電", t:"原子力発電"},{y:"化石燃料を燃やして発電する方法", t:"火力発電"},{y:"ダムに貯めた水で発電する方法", t:"水力発電"},{y:"光を直接電気に変える発電", t:"太陽光発電"},{y:"ごみを燃やした熱などを利用する発電", t:"バイオマス発電"},{y:"地熱を利用して発電する方法", t:"地熱発電"},{y:"地球温暖化の原因とされる気体", t:"二酸化炭素（温暖化）"}] }
+                }
+            }
+        };
+
+
+        let activeData = [], fullSet = [];
+        let p1Score = 0, p2Score = 0, p1Combo = 0, p2Combo = 0;
+        let currentTarget = null, luckyCardTerm = null;
+        let gameActive = false, questionStartTime = 0;
+        let currentGameMode = 'karuta';
+        let stats = { p1: { total: 0, correct: 0 }, p2: { total: 0, correct: 0 } };
+
+
+        const synth = window.speechSynthesis;
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+
+        window.onload = () => {
+            const saved = localStorage.getItem('scienceKarutaStats');
+            if (saved) {
+                stats = JSON.parse(saved);
+                updateAccuracyDisplay();
+            }
+            updateFields();
+            setTheme('g2', 'bio', 'cell');
+        };
+
+
+        function setGameMode(mode) {
+            currentGameMode = mode;
+            document.getElementById('mode-karuta').className = (mode === 'karuta' ? 'mode-active' : '');
+            document.getElementById('mode-quiz').className = (mode === 'quiz' ? 'mode-active' : '');
+            updateThemeButtons();
+        }
+
+
+        function updateFields() { updateThemeButtons(); }
+
+
+        function updateThemeButtons() {
+            const grade = document.getElementById('grade-sel').value;
+            const field = document.getElementById('field-sel').value;
+            const container = document.getElementById('theme-btn-group');
+            container.innerHTML = '';
+            const themes = dataTree[grade][field];
+            if (themes) {
+                Object.keys(themes).forEach(key => {
+                    const btn = document.createElement('button');
+                    btn.textContent = themes[key].name;
+                    btn.onclick = () => setTheme(grade, field, key);
+                    container.appendChild(btn);
+                });
+            }
+        }
+
+
+        function setTheme(grade, field, key) {
+            const selected = dataTree[grade][field][key];
+            activeData = JSON.parse(JSON.stringify(selected.data));
+            fullSet = JSON.parse(JSON.stringify(selected.data));
+            p1Score = 0; p2Score = 0; p1Combo = 0; p2Combo = 0;
+            luckyCardTerm = activeData[Math.floor(Math.random() * activeData.length)].t;
+            synth.cancel();
+            document.querySelectorAll('.quiz-container').forEach(e => e.style.display = 'none');
+            document.querySelectorAll('.board').forEach(e => e.style.display = 'grid');
+            document.getElementById('p1-score').textContent = 0;
+            document.getElementById('p2-score').textContent = 0;
+            document.getElementById('p1-result').style.display = 'none';
+            document.getElementById('p2-result').style.display = 'none';
+            document.getElementById('start-btn').disabled = false;
+            
+            if (currentGameMode === 'karuta') {
+                const cardCount = activeData.length;
+                let minWidth = cardCount <= 6 ? "180px" : (cardCount <= 10 ? "140px" : "110px");
+                let fontSize = cardCount <= 6 ? "1.4rem" : (cardCount <= 10 ? "1.1rem" : "0.95rem");
+                render(activeData, 'p1-board', minWidth, fontSize);
+                render(activeData, 'p2-board', minWidth, fontSize);
+                updateYomi("枚数: " + cardCount);
+            } else {
+                updateYomi("３択モード準備完了");
+            }
+        }
+
+
+        function updateYomi(txt) {
+            document.getElementById('p1-yomi-text').textContent = txt;
+            document.getElementById('p2-yomi-text').textContent = txt;
+            document.getElementById('p1-yomi-text').style.display = 'block';
+            document.getElementById('p2-yomi-text').style.display = 'block';
+        }
+
+
+        function render(data, boardId, minWidth, fs) {
+            const board = document.getElementById(boardId);
+            board.innerHTML = '';
+            board.style.gridTemplateColumns = `repeat(auto-fit, minmax(${minWidth}, 1fr))`;
+            [...data].sort(() => Math.random() - 0.5).forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'card'; div.textContent = item.t; div.style.fontSize = fs;
+                div.onclick = () => tap(item.t, boardId);
+                board.appendChild(div);
+            });
+        }
+
+
+        function startBattle() {
+            if (activeData.length === 0) return;
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            synth.cancel();
+            document.getElementById('start-btn').disabled = true;
+            gameActive = true;
+            if (currentGameMode === 'karuta') setTimeout(next, 800);
+            else showLastMission();
+        }
+
+
+        function next() {
+            if (!gameActive || activeData.length === 0) return;
+            if (activeData.length === 1 && fullSet.length > 1) { showLastMission(); return; }
+            updateYomi("......");
+            setTimeout(() => {
+                if (!gameActive) return;
+                const idx = Math.floor(Math.random() * activeData.length);
+                currentTarget = activeData.splice(idx, 1)[0];
+                speak(currentTarget.y);
+            }, 800);
+        }
+
+
+        function speak(text) {
+            synth.cancel();
+            const utter = new SpeechSynthesisUtterance(text);
+            utter.lang = 'ja-JP';
+            utter.onstart = () => { updateYomi(text); questionStartTime = Date.now(); };
+            setTimeout(() => {
+                if (document.getElementById('p1-yomi-text').textContent === "......") {
+                    updateYomi(text);
+                    questionStartTime = Date.now();
+                }
+            }, 500);
+            synth.speak(utter);
+        }
+
+
+        function tap(term, boardId) {
+            if (!currentTarget || !gameActive || questionStartTime === 0) return;
+            const isP1 = boardId === 'p1-board';
+            const pid = isP1 ? 'p1' : 'p2';
+            stats[pid].total++;
+            if (term === currentTarget.t) {
+                stats[pid].correct++;
+                const responseTime = (Date.now() - questionStartTime) / 1000;
+                const speedBonus = Math.max(0, Math.floor(5 - responseTime));
+                let isLucky = (term === luckyCardTerm);
+                let bonusPoints = speedBonus + (isLucky ? 3 : 0);
+                beep(880, 0.3);
+                if (isP1) { p1Combo++; p2Combo = 0; p1Score += (p1Combo + bonusPoints); document.getElementById('p1-score').textContent = p1Score; showEffects('p1', p1Combo, speedBonus, isLucky); }
+                else { p2Combo++; p1Combo = 0; p2Score += (p2Combo + bonusPoints); document.getElementById('p2-score').textContent = p2Score; showEffects('p2', p2Combo, speedBonus, isLucky); }
+                document.querySelectorAll('.card').forEach(c => { if (c.textContent === term) c.classList.add('taken'); });
+                currentTarget = null; questionStartTime = 0; synth.cancel();
+                if (activeData.length === 0) showResult(); else setTimeout(next, 1200);
+            } else {
+                if (isP1) { p1Combo = 0; p1Score = Math.max(0, p1Score - 1); document.getElementById('p1-score').textContent = p1Score; }
+                else { p2Combo = 0; p2Score = Math.max(0, p2Score - 1); document.getElementById('p2-score').textContent = p2Score; }
+                applyPenalty(boardId);
+            }
+        }
+
+
+        function showLastMission() {
+            if (activeData.length === 0) { showResult(); return; }
+            const idx = Math.floor(Math.random() * activeData.length);
+            currentTarget = activeData.splice(idx, 1)[0];
+            updateYomi(currentGameMode === 'quiz' ? "正しい説明を選べ！" : "ラストミッション！正しい説明を選べ！");
+            document.querySelectorAll('.board').forEach(e => e.style.display = 'none');
+            document.querySelectorAll('.quiz-container').forEach(e => e.style.display = 'flex');
+            let dummies = fullSet.filter(i => i.t !== currentTarget.t).sort(() => 0.5 - Math.random()).slice(0, 2);
+            let choices = [...dummies, currentTarget].sort(() => 0.5 - Math.random());
+            ['p1', 'p2'].forEach(p => {
+                document.getElementById(p + '-q-target').textContent = currentTarget.t;
+                const container = document.getElementById(p + '-q-choices');
+                container.innerHTML = '';
+                choices.forEach(c => {
+                    const btn = document.createElement('button');
+                    btn.className = 'choice-btn'; btn.textContent = c.y;
+                    btn.onclick = () => quizTap(c.t, p);
+                    container.appendChild(btn);
+                });
+            });
+        }
+
+
+        function quizTap(term, pPrefix) {
+            const isP1 = pPrefix === 'p1';
+            stats[pPrefix].total++;
+            if (term === currentTarget.t) {
+                stats[pPrefix].correct++;
+                beep(1000, 0.4);
+                if (isP1) p1Score += 3; else p2Score += 3;
+                document.getElementById('p1-score').textContent = p1Score;
+                document.getElementById('p2-score').textContent = p2Score;
+                if (currentGameMode === 'quiz' && activeData.length > 0) setTimeout(showLastMission, 800);
+                else { activeData = []; showResult(); }
+            } else {
+                if (isP1) { p1Score = Math.max(0, p1Score - 1); document.getElementById('p1-score').textContent = p1Score; applyPenalty('p1-board'); }
+                else { p2Score = Math.max(0, p2Score - 1); document.getElementById('p2-score').textContent = p2Score; applyPenalty('p2-board'); }
+            }
+        }
+
+
+        function applyPenalty(bid) {
+            const zoneId = bid.split('-')[0];
+            const zone = document.getElementById(zoneId + '-zone');
+            const msg = document.getElementById(zoneId + '-penalty');
+            zone.classList.add('penalty'); msg.style.display = 'block';
+            beep(220, 0.5);
+            setTimeout(() => { zone.classList.remove('penalty'); msg.style.display = 'none'; }, 2000);
+        }
+
+
+        function showEffects(p, combo, speed, lucky) {
+            const comboMsg = document.getElementById(p + '-combo');
+            if (combo > 1) { comboMsg.textContent = combo + " COMBO!"; comboMsg.style.display = 'block'; setTimeout(() => comboMsg.style.display='none', 1000); }
+            if (lucky) { const l = document.getElementById(p + '-lucky'); l.style.display = 'block'; setTimeout(() => l.style.display='none', 1500); }
+        }
+
+
+        function showResult() {
+            gameActive = false;
+            localStorage.setItem('scienceKarutaStats', JSON.stringify(stats));
+            updateAccuracyDisplay();
+            const p1R = document.getElementById('p1-result');
+            const p2R = document.getElementById('p2-result');
+            p1R.style.display = 'block'; p2R.style.display = 'block';
+            if (p1Score > p2Score) { p1R.textContent = "WIN!"; p1R.className = "result-display win"; p2R.textContent = "LOSE"; p2R.className = "result-display lose"; }
+            else if (p2Score > p1Score) { p2R.textContent = "WIN!"; p2R.className = "result-display win"; p1R.textContent = "LOSE"; p1R.className = "result-display lose"; }
+            else { p1R.textContent = "DRAW"; p2R.textContent = "DRAW"; }
+            updateYomi("試合終了！");
+        }
+
+
+        function updateAccuracyDisplay() {
+            ['p1', 'p2'].forEach(p => {
+                const acc = stats[p].total === 0 ? 0 : Math.round((stats[p].correct / stats[p].total) * 100);
+                document.getElementById(p + '-acc').textContent = acc + "%";
+            });
+        }
+
+
+        function resetStats() {
+            if(confirm("正解率データを初期化しますか？")) {
+                stats = { p1: { total: 0, correct: 0 }, p2: { total: 0, correct: 0 } };
+                localStorage.removeItem('scienceKarutaStats');
+                updateAccuracyDisplay();
+            }
+        }
+
+
+        function beep(freq, duration) {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            osc.frequency.value = freq; gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+            osc.start(); osc.stop(audioCtx.currentTime + duration);
+        }
+    </script>
+</body>
+</html>
