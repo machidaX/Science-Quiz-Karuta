@@ -1,8 +1,8 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>理科マスターかるた v1.5.3</title>
+    <title>理科マスターかるた v1.5.4</title>
     <style>
         body { font-family: 'Hiragino Kaku Gothic ProN', sans-serif; margin: 0; overflow: hidden; background: #222; color: white; display: flex; flex-direction: column; height: 100vh; }
         .player-zone { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; position: relative; padding: 10px; box-sizing: border-box; overflow: hidden; }
@@ -24,7 +24,6 @@
         #start-btn { background: #ff9800; border: none; font-weight: bold; color: #000; width: 100%; font-size: 0.85rem; padding: 6px; }
         #reset-btn { background: #b71c1c; color: white; border: none; font-size: 0.6rem; padding: 2px 6px; }
         .mode-active { background: #00e5ff !important; color: #000 !important; border-color: #fff !important; }
-
 
         .msg-overlay { position: absolute; font-size: 2rem; font-weight: bold; z-index: 10; background: rgba(0,0,0,0.8); padding: 10px 20px; border-radius: 10px; display: none; pointer-events: none; text-align: center; }
         .penalty-msg { color: #ff5252; }
@@ -99,14 +98,13 @@
         </div>
     </div>
 
-
     <script>
         const dataTree = {
             g1: {
                 bio: {
                     flower: { name: "花のつくり", data: [{y:"受粉すると将来種子になる部分", t:"胚珠"},{y:"花粉がつくめしべの先端", t:"柱頭"},{y:"胚珠が子房の中にある植物", t:"被子植物"},{y:"マツなどの胚珠がむき出しの植物", t:"裸子植物"},{y:"将来果実になる部分", t:"子房"},{y:"おしべの先の花粉が入った袋", t:"やく"},{y:"花弁がすべて合わさっている花", t:"合弁花"},{y:"花弁が1枚ずつ離れている花", t:"離弁花"}] },
                     leaf: { name: "根・茎・葉", data: [{y:"植物が光を受けて養分を作る働き", t:"光合成"},{y:"水蒸気が出ていく葉の隙間", t:"気孔"},{y:"水の通り道である管", t:"道管"},{y:"養分の通り道である管", t:"師管"},{y:"道管と師管が集まった束", t:"維管束"},{y:"葉から水蒸気が出ていく現象", t:"蒸散"},{y:"双子葉類の根に見られる太い根", t:"主根"},{y:"主根から枝分かれした細い根", t:"側根"}] },
-                    class: { name: "植物の分類", data: [{y:"種子を作らず胞子で増え、根・茎・葉の区別がある植物", t:"シダ植物"},{y:"種子を作らず胞子で増え、維管束がなく湿った所に生える", t:"コケ植物"},{y:"芽生えの葉（子葉）が2枚の仲間", t:"双子葉類"},{y:"芽生えの葉（子葉）が1枚の仲間", t:"単子葉類"},{y:"双子葉類の中で花弁が離れている仲間", t:"離弁花類"},{y:"葉脈が平行に通っているもの", t:"平行脈"},{y:"光合成を行わず、胞子で増えるカビの仲間", t:"菌類"},{y:"水中の小さな植物、ミカヅキモなど", t:"藻類"}] },
+                    class: { name: "植物の分類", data: [{y:"種子を作らず胞子で増え、根・茎・葉の区別がある植物", t:"シダ植物"},{y:"種子を作らず胞子で増え、維管束がなく湿った所に生える", t:"コケ植物"},{y:"芽生えの葉（子葉）が2枚の仲間", t:"双子葉類"},{y:"芽生えの葉（子葉）が1枚の仲間", t:"単子葉類"},{y:"双子葉類の中で花弁が離れている仲間", t:"離弁花類"},{y:"葉脈が平行に通っている特徴の仲間", t:"単子葉類の葉脈"},{y:"光合成を行わず、胞子で増えるカビの仲間", t:"菌類"},{y:"水中の小さな植物、ミカヅキモなど", t:"藻類"}] },
                     micro: { name: "観察の基礎", data: [{y:"顕微鏡のレボルバーについている倍率を変えるためのレンズ", t:"対物レンズ"},{y:"ルーペで見るとき、動かせるものはどちらへ", t:"目"},{y:"顕微鏡の明るさを調節する部分", t:"しぼり"},{y:"ピントを合わせるために回すネジ", t:"調節ねじ"},{y:"スライドガラスに材料をのせたもの", t:"プレパラート"},{y:"目に最も近い側のレンズ", t:"接眼レンズ"},{y:"視野を動かすために回す部分", t:"ステージ上下ハンドル"},{y:"微細なピント調整に使うネジ", t:"微動ねじ"}] }
                 },
                 chem: {
@@ -150,7 +148,7 @@
                 phys: {
                     circuit: { name: "電流と電圧", data: [{y:"電流の大きさの単位", t:"アンペア"},{y:"電圧の大きさの単位", t:"ボルト"},{y:"電流の通り道が1本のつなぎ方", t:"直列回路"},{y:"枝分かれした回路のつなぎ方", t:"並列回路"},{y:"直列回路の電流はどこでもどうなるか", t:"常に同じ"},{y:"並列回路の電流はどんな特徴があるか", t:"各部分に流れる電流の和が枝分かれの前後と同じ"},{y:"電流計を回路につなぐ方法", t:"回路に直列"},{y:"電圧計を回路につなぐ方法", t:"回路に並列"}] },
                     ohm: { name: "オームの法則", data: [{y:"電流は電圧に比例するという法則", t:"オームの法則"},{y:"電気の通りにくさを表す量", t:"電気抵抗"},{y:"抵抗の大きさの単位", t:"オーム"},{y:"電流の流しやすさが極めて大きい物質", t:"導体"},{y:"電流をほとんど通さない物質", t:"絶縁体"},{y:"金属ではないが、抵抗が小さい物質", t:"炭素"},{y:"直列回路の全体抵抗は？", t:"各抵抗の和"},{y:"並列回路の全体抵抗は？", t:"各抵抗の逆数の和が全体の抵抗の逆数"}] },
-                    work: { name: "電力と熱", data: [{y:"1秒間に使う電気エネルギー量", t:"電力"},{y:"電流によって発生する熱量", t:"熱量"},{y:"電力の単位", t:"ワット"},{y:"熱量の単位", t:"ジュール"},{y:"電力に時間をかけたもの", t:"電力量"},{y:"1Whは何Jか", t:"3600J"},{y:"電力量の別の単位", t:"キロワット時"},{y:"水1gの温度を1度上げる熱量", t:"約4.2J"}] },
+                    work: { name: "電力と熱", data: [{y:"1秒間に使う電気エネルギー量", t:"電力"},{y:"電流によって発生する熱量", t:"熱量"},{y:"電力の単位", t:"ワット"},{y:"熱量の単位", t:"ジュール"},{y:"電力に時間をかけたもの", t:"電力量"},{y:"1Whは何Jか", t:"3600J"},{y:"電力量の別の単位", t:"キロワット時"},{y:"水1g의温度を1度上げる熱量", t:"約4.2J"}] },
                     mag: { name: "磁界と電流", data: [{y:"磁力が働く空間", t:"磁界"},{y:"磁界内の電流が受ける力を利用する回転装置", t:"モーター"},{y:"磁界の変化で電流が流れる現象", t:"電磁誘導"},{y:"コイルの中の磁界を変化させて流れる電流", t:"誘導電流"},{y:"磁力線の向きはどちらからどちらか", t:"N極からS極"},{y:"右ねじの法則でネジが進む向きが表しているのは？", t:"磁界の向き"},{y:"フレミングの左手の法則の中指は何の向きか", t:"電流の向き"},{y:"コイルに流れる電流と発生する磁界の組み合わせを調べるときに使う手はどっちの手？", t:"右手"}] }
                 }
             },
@@ -182,7 +180,6 @@
             }
         };
 
-
         let activeData = [], fullSet = [];
         let p1Score = 0, p2Score = 0, p1Combo = 0, p2Combo = 0;
         let currentTarget = null, luckyCardTerm = null;
@@ -190,10 +187,8 @@
         let currentGameMode = 'karuta';
         let stats = { p1: { total: 0, correct: 0 }, p2: { total: 0, correct: 0 } };
 
-
         const synth = window.speechSynthesis;
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-
 
         window.onload = () => {
             const saved = localStorage.getItem('scienceKarutaStats');
@@ -205,7 +200,6 @@
             setTheme('g2', 'bio', 'cell');
         };
 
-
         function setGameMode(mode) {
             currentGameMode = mode;
             document.getElementById('mode-karuta').className = (mode === 'karuta' ? 'mode-active' : '');
@@ -213,9 +207,7 @@
             updateThemeButtons();
         }
 
-
         function updateFields() { updateThemeButtons(); }
-
 
         function updateThemeButtons() {
             const grade = document.getElementById('grade-sel').value;
@@ -232,7 +224,6 @@
                 });
             }
         }
-
 
         function setTheme(grade, field, key) {
             const selected = dataTree[grade][field][key];
@@ -261,14 +252,12 @@
             }
         }
 
-
         function updateYomi(txt) {
             document.getElementById('p1-yomi-text').textContent = txt;
             document.getElementById('p2-yomi-text').textContent = txt;
             document.getElementById('p1-yomi-text').style.display = 'block';
             document.getElementById('p2-yomi-text').style.display = 'block';
         }
-
 
         function render(data, boardId, minWidth, fs) {
             const board = document.getElementById(boardId);
@@ -282,7 +271,6 @@
             });
         }
 
-
         function startBattle() {
             if (activeData.length === 0) return;
             if (audioCtx.state === 'suspended') audioCtx.resume();
@@ -292,7 +280,6 @@
             if (currentGameMode === 'karuta') setTimeout(next, 800);
             else showLastMission();
         }
-
 
         function next() {
             if (!gameActive || activeData.length === 0) return;
@@ -305,7 +292,6 @@
                 speak(currentTarget.y);
             }, 800);
         }
-
 
         function speak(text) {
             synth.cancel();
@@ -320,7 +306,6 @@
             }, 500);
             synth.speak(utter);
         }
-
 
         function tap(term, boardId) {
             if (!currentTarget || !gameActive || questionStartTime === 0) return;
@@ -346,7 +331,6 @@
             }
         }
 
-
         function showLastMission() {
             if (activeData.length === 0) { showResult(); return; }
             const idx = Math.floor(Math.random() * activeData.length);
@@ -369,8 +353,8 @@
             });
         }
 
-
         function quizTap(term, pPrefix) {
+            if (!gameActive || !currentTarget) return; // バグ修正: ゲーム終了後の入力を遮断
             const isP1 = pPrefix === 'p1';
             stats[pPrefix].total++;
             if (term === currentTarget.t) {
@@ -379,72 +363,77 @@
                 if (isP1) p1Score += 3; else p2Score += 3;
                 document.getElementById('p1-score').textContent = p1Score;
                 document.getElementById('p2-score').textContent = p2Score;
-                if (currentGameMode === 'quiz' && activeData.length > 0) setTimeout(showLastMission, 800);
-                else { activeData = []; showResult(); }
+                
+                if (currentGameMode === 'quiz' && activeData.length > 0) {
+                    currentTarget = null;
+                    setTimeout(showLastMission, 800);
+                } else {
+                    activeData = [];
+                    gameActive = false; // バグ修正: ラスト問題正解時にフラグを落とす
+                    showResult();
+                }
             } else {
-                if (isP1) { p1Score = Math.max(0, p1Score - 1); document.getElementById('p1-score').textContent = p1Score; applyPenalty('p1-board'); }
-                else { p2Score = Math.max(0, p2Score - 1); document.getElementById('p2-score').textContent = p2Score; applyPenalty('p2-board'); }
+                beep(200, 0.2);
+                if (isP1) p1Score = Math.max(0, p1Score - 1); else p2Score = Math.max(0, p2Score - 1);
+                document.getElementById('p1-score').textContent = p1Score;
+                document.getElementById('p2-score').textContent = p2Score;
             }
         }
 
-
-        function applyPenalty(bid) {
-            const zoneId = bid.split('-')[0];
-            const zone = document.getElementById(zoneId + '-zone');
-            const msg = document.getElementById(zoneId + '-penalty');
-            zone.classList.add('penalty'); msg.style.display = 'block';
-            beep(220, 0.5);
-            setTimeout(() => { zone.classList.remove('penalty'); msg.style.display = 'none'; }, 2000);
-        }
-
-
-        function showEffects(p, combo, speed, lucky) {
-            const comboMsg = document.getElementById(p + '-combo');
-            if (combo > 1) { comboMsg.textContent = combo + " COMBO!"; comboMsg.style.display = 'block'; setTimeout(() => comboMsg.style.display='none', 1000); }
-            if (lucky) { const l = document.getElementById(p + '-lucky'); l.style.display = 'block'; setTimeout(() => l.style.display='none', 1500); }
-        }
-
-
         function showResult() {
             gameActive = false;
+            synth.cancel();
             localStorage.setItem('scienceKarutaStats', JSON.stringify(stats));
             updateAccuracyDisplay();
+            
             const p1R = document.getElementById('p1-result');
             const p2R = document.getElementById('p2-result');
             p1R.style.display = 'block'; p2R.style.display = 'block';
-            if (p1Score > p2Score) { p1R.textContent = "WIN!"; p1R.className = "result-display win"; p2R.textContent = "LOSE"; p2R.className = "result-display lose"; }
-            else if (p2Score > p1Score) { p2R.textContent = "WIN!"; p2R.className = "result-display win"; p1R.textContent = "LOSE"; p1R.className = "result-display lose"; }
-            else { p1R.textContent = "DRAW"; p2R.textContent = "DRAW"; }
-            updateYomi("試合終了！");
+            if (p1Score > p2Score) { p1R.textContent = "WIN"; p1R.className = "result-display win"; p2R.textContent = "LOSE"; p2R.className = "result-display lose"; }
+            else if (p2Score > p1Score) { p2R.textContent = "WIN"; p2R.className = "result-display win"; p1R.textContent = "LOSE"; p1R.className = "result-display lose"; }
+            else { p1R.textContent = "DRAW"; p2R.textContent = "DRAW"; p1R.className = p2R.className = "result-display"; }
+            document.getElementById('start-btn').disabled = false;
         }
-
 
         function updateAccuracyDisplay() {
-            ['p1', 'p2'].forEach(p => {
-                const acc = stats[p].total === 0 ? 0 : Math.round((stats[p].correct / stats[p].total) * 100);
-                document.getElementById(p + '-acc').textContent = acc + "%";
-            });
+            const p1a = stats.p1.total === 0 ? 0 : Math.round((stats.p1.correct / stats.p1.total) * 100);
+            const p2a = stats.p2.total === 0 ? 0 : Math.round((stats.p2.correct / stats.p2.total) * 100);
+            document.getElementById('p1-acc').textContent = p1a + "%";
+            document.getElementById('p2-acc').textContent = p2a + "%";
         }
 
-
         function resetStats() {
-            if(confirm("正解率データを初期化しますか？")) {
+            if (confirm("通算正解率を初期化しますか？")) {
                 stats = { p1: { total: 0, correct: 0 }, p2: { total: 0, correct: 0 } };
                 localStorage.removeItem('scienceKarutaStats');
                 updateAccuracyDisplay();
             }
         }
 
+        function showEffects(p, combo, speed, lucky) {
+            const cEl = document.getElementById(p + '-combo');
+            if (combo > 1) { cEl.textContent = combo + " COMBO! +" + combo; cEl.style.display = 'block'; setTimeout(() => cEl.style.display = 'none', 800); }
+            if (lucky) { const lEl = document.getElementById(p + '-lucky'); lEl.style.display = 'block'; setTimeout(() => lEl.style.display = 'none', 1000); }
+        }
 
-        function beep(freq, duration) {
+        function applyPenalty(boardId) {
+            const pid = boardId === 'p1-board' ? 'p1' : 'p2';
+            const board = document.getElementById(boardId);
+            const msg = document.getElementById(pid + '-penalty');
+            board.classList.add('penalty'); msg.style.display = 'block'; beep(150, 0.4);
+            setTimeout(() => { board.classList.remove('penalty'); msg.style.display = 'none'; }, 2000);
+        }
+
+        function beep(freq, dur) {
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
             osc.connect(gain); gain.connect(audioCtx.destination);
             osc.frequency.value = freq; gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
-            osc.start(); osc.stop(audioCtx.currentTime + duration);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + dur);
+            osc.start(); osc.stop(audioCtx.currentTime + dur);
         }
     </script>
 </body>
-
 </html>
+
+
